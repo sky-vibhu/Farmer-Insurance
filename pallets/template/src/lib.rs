@@ -23,7 +23,6 @@ pub trait WeightInfo {
 	fn query_farmer_index() -> Weight;
 }
 	
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
