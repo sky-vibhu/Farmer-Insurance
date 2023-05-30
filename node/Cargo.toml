@@ -69,6 +69,7 @@ substrate-build-script-utils = { version = "3.0.0", git = "https://github.com/pa
 
 [features]
 default = []
+
 # Dependencies that are only required if runtime benchmarking should be build.
 runtime-benchmarks = [
 	"node-template-runtime/runtime-benchmarks",

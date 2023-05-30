@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/reference/frame-pallets/>
 pub use pallet::*;
 
 #[cfg(test)]
@@ -14,90 +11,384 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+mod weights;
+use frame_support::pallet_prelude::Weight;
+pub use weights::FarmWeightInfo;
+pub trait WeightInfo {
+	fn register_farmer() -> Weight;
+	fn register_insurance() -> Weight;
+	fn query_insurance_validity() -> Weight;
+	fn query_insurance_amount() -> Weight;
+	fn query_insurance_land_co_ordinates() -> Weight;
+	fn query_farmer_index() -> Weight;
+}
+	
+
 #[frame_support::pallet]
 pub mod pallet {
+	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	/// Configure the pallet by specifying the parameters and types on which it depends.
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+ 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		 type WeightInfo: WeightInfo;
 	}
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	// Learn more about declaring storage items:
-	// https://docs.substrate.io/main-docs/build/runtime-storage/#declaring-storage-items
-	pub type Something<T> = StorageValue<_, u32>;
+	#[pallet::getter(fn a)]
+    pub type TotalRegisteredFarmer<T> = StorageValue<_, u32, ValueQuery>;
 
-	// Pallets use events to inform users when important changes are made.
-	// https://docs.substrate.io/main-docs/build/events-errors/
+    #[pallet::storage]
+    #[pallet::getter(fn b)]
+    pub type TotalRegisteredInsurance<T> = StorageValue<_, u32, ValueQuery>;
+
+
+    #[pallet::storage]
+    #[pallet::getter(fn c)]
+    pub(super) type FarmerInsurance<T: Config> = StorageMap< _, 
+    Blake2_128Concat, 
+    u32, 
+    u32, 
+    ValueQuery>;
+
+
+    #[pallet::storage]
+    #[pallet::getter(fn d)]
+    pub(super) type InsuranceValidity<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u32, 
+        u32, 
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn e)]
+    pub(super) type InsuranceAmount<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u32, 
+        u32, 
+        ValueQuery
+    >;   
+
+    #[pallet::storage]
+    #[pallet::getter(fn farmers)]
+    // #[scale_info(skip_type_params(T))]
+    pub(super) type FarmerAadharDetails<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u32, 
+        u64,  
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn g)]
+    // #[scale_info(skip_type_params(T))]
+    pub(super) type AadhaarIndex<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u64, 
+        u32,  
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn h)]
+    pub(super) type AadhaarCertificate<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u64, 
+        u32,  
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn i)]
+    pub(super) type FarmerOwnedLand<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u32, 
+        u32, 
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn j)]
+    pub(super) type Certificate<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u32, 
+        u32, 
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn k)]
+    pub(super) type LandCoOrdinates<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat,
+        u32, 
+        u32, 
+        ValueQuery
+    >;
+	  
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored { something: u32, who: T::AccountId },
+        NewFarmerStored(
+            u32, 
+            u64,
+            u32,
+            T::AccountId),
+        
+        NewInsuranceStored(
+            u32, 
+            u32, 
+            u32, 
+            u32, 
+            T::AccountId),
+
+        QueryInsuranceValidity(
+            u32,
+            u32,
+            T::AccountId
+        ),
+        QueryInsuranceAmount(
+            u32,
+            u32,
+            T::AccountId
+        ),
+        QueryInsuranceLand(
+            u32,
+            u32,
+            T::AccountId
+        ),
+        QueryFarmerId(
+            u64,
+            u32,
+            T::AccountId
+        ),
+        QueryInsuranceCertificate(
+            u64,
+            u32,
+            T::AccountId
+        ),
 	}
 
-	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
 		NoneValue,
-		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+        FarmerNotRegistered,
+        AadhaarNumberNotCorrect, 
+        FarmerAlreadyExists,
 	}
 
-	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
-	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::call_index(0)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/main-docs/build/origins/
+		#[pallet::weight(T::WeightInfo::register_farmer())]
+		pub fn register_farmer(
+            origin: OriginFor<T>, 
+            aadhaar_number: u64, 
+            land_owned: u32,) -> 
+            DispatchResult {
+			
 			let who = ensure_signed(origin)?;
 
-			// Update storage.
-			<Something<T>>::put(something);
+            ensure!(!Self::already_registered_farmer(
+                aadhaar_number), 
+                 Error::<T>::FarmerAlreadyExists);
 
-			// Emit an event.
-			Self::deposit_event(Event::SomethingStored { something, who });
-			// Return a successful DispatchResultWithPostInfo
+            ensure!(!Self::correct_aadhaar(
+              aadhaar_number), 
+             Error::<T>::AadhaarNumberNotCorrect);
+
+            if  !<TotalRegisteredFarmer<T>>::exists() { <TotalRegisteredFarmer<T>>::put(0u32);}
+            else{<TotalRegisteredFarmer<T>>::mutate(|farmer_index_id| *farmer_index_id+= 1);}
+
+            let farmer_index_id =  <TotalRegisteredFarmer<T>>::get();
+                <FarmerAadharDetails<T>>::insert(
+                    farmer_index_id,
+                    aadhaar_number,
+                );
+
+                <AadhaarIndex<T>>::insert(
+                    aadhaar_number,
+                    farmer_index_id,
+                );
+
+                <FarmerOwnedLand<T>>::insert(
+                    farmer_index_id,
+                    land_owned,
+                );
+
+
+			Self::deposit_event(Event::NewFarmerStored(
+                farmer_index_id, 
+                aadhaar_number, 
+                land_owned, 
+                who));
 			Ok(())
 		}
 
-		/// An example dispatchable that may throw a custom error.
-		#[pallet::call_index(1)]
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
-		pub fn cause_error(origin: OriginFor<T>) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+        #[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::register_insurance())]
+		pub fn register_insurance(
+            origin: OriginFor<T>, 
+            aadhaar_number: u64,
+            validity: u32, 
+            amount: u32,
+            land_co_ordinates: u32 ) ->
+             DispatchResult {
+			
+			let who = ensure_signed(origin)?;
+			
+            ensure!(!Self::correct_aadhaar(
+                aadhaar_number), 
+                 Error::<T>::AadhaarNumberNotCorrect);
 
-			// Read a value from storage.
-			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
-				None => return Err(Error::<T>::NoneValue.into()),
-				Some(old) => {
-					// Increment the value read from storage; will error in the event of overflow.
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
-					<Something<T>>::put(new);
-					Ok(())
-				},
-			}
+            ensure!(!Self::registered_farmer(
+                aadhaar_number), 
+                 Error::<T>::FarmerNotRegistered);
+
+            let farmer_index_id = <AadhaarIndex<T>>::get(aadhaar_number);
+
+            if  !<TotalRegisteredInsurance<T>>::exists() { <TotalRegisteredInsurance<T>>::put(0u32);}
+            else{<TotalRegisteredInsurance<T>>::mutate(|val| *val+= 1);}
+                      
+            let certificate_number =  <Certificate<T>>::get(farmer_index_id);
+            <Certificate<T>>::insert(
+                farmer_index_id,
+                certificate_number,
+            );
+
+            <InsuranceValidity<T>>::insert(
+                certificate_number,
+                validity,
+            );
+
+            <InsuranceAmount<T>>::insert(
+                certificate_number,
+                amount,
+            );
+
+             <LandCoOrdinates<T>>::insert(
+                    farmer_index_id,
+                    land_co_ordinates.clone(),
+                );
+
+            
+			Self::deposit_event(Event::NewInsuranceStored(
+                farmer_index_id, 
+                certificate_number,
+                validity,
+                amount,
+                who ));
+			Ok(())
 		}
-	}
+
+        #[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::query_insurance_validity())]
+			pub fn query_insurance_validity(
+            origin: OriginFor<T>,
+            certificate_number: u32,
+        ) -> DispatchResult
+        {
+            let who = ensure_signed(origin)?;
+            let validity = <InsuranceValidity<T>>::get(certificate_number.clone());
+            Self::deposit_event(Event::QueryInsuranceValidity(
+                certificate_number.clone(),
+                validity,
+                who,
+            ));
+            Ok(())
+        }
+
+        #[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::query_insurance_amount())]
+			pub fn query_insurance_amount(
+            origin: OriginFor<T>,
+            certificate_number: u32,
+        ) -> DispatchResult
+        {
+            let who = ensure_signed(origin)?;
+            let amount = <InsuranceAmount<T>>::get(certificate_number.clone());
+            Self::deposit_event(Event::QueryInsuranceAmount(
+                certificate_number.clone(),
+                amount,
+                who,
+            ));
+            Ok(())
+          }
+
+          #[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::query_insurance_land_co_ordinates())]          
+		pub fn query_insurance_land_co_ordinates(
+              origin: OriginFor<T>,
+              certificate_number: u32,
+          ) -> DispatchResult
+          {
+              let who = ensure_signed(origin)?;
+              let land = <LandCoOrdinates<T>>::get(certificate_number.clone());
+              Self::deposit_event(Event::QueryInsuranceLand(
+                  certificate_number.clone(),
+                  land,
+                  who,
+              ));
+              Ok(())
+            }
+
+            #[pallet::call_index(5)]
+			#[pallet::weight(T::WeightInfo::query_farmer_index())]
+            pub fn query_farmer_index(
+                origin: OriginFor<T>,
+                aadhaar_number: u64,
+            ) -> DispatchResult
+            {
+                let who = ensure_signed(origin)?;
+                let farmer_index = <AadhaarIndex<T>>::get(aadhaar_number);
+                Self::deposit_event(Event::QueryFarmerId(
+                    aadhaar_number,
+                    farmer_index,
+                    who,
+                ));
+                Ok(())
+              }
+        }
+	
+    impl<T: Config> Pallet<T> {
+    pub fn registered_farmer(aadhaar: u64) -> bool   {
+        match <AadhaarIndex<T>>::contains_key(aadhaar) {
+            true => false,
+            false => true,
+        }
+    }
+
+    pub fn already_registered_farmer(aadhaar: u64) -> bool   {
+        match <AadhaarIndex<T>>::contains_key(aadhaar) {
+            true => true,
+            false => false,
+        }
+    }
+
+    pub fn correct_aadhaar(aadhaar: u64) -> bool {
+            if aadhaar > 99999999999 && aadhaar < 1000000000000 {
+            false
+            }
+            else  { 
+            true
+            }
+        }
 }
+} 
+
